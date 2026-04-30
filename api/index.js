@@ -11,18 +11,10 @@ if (!admin.apps.length) {
 }
 
 module.exports = async (req, res) => {
-  // --- CORS HEADERS START ---
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Ya specific domain: 'https://healthjobs-portal.web.app'
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-  // OPTIONS request ko foran handle karein (Preflight)
+  // OPTIONS request handle karein (vercel.json headers ke sath bhi yeh zaruri hai)
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
-  // --- CORS HEADERS END ---
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -50,7 +42,6 @@ module.exports = async (req, res) => {
     const response = await admin.messaging().send(message);
     return res.status(200).json({ success: true, messageId: response });
   } catch (error) {
-    console.error("FCM Error:", error);
     return res.status(500).json({ error: error.message });
   }
 };
