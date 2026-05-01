@@ -2,14 +2,24 @@ const admin = require('firebase-admin');
 
 // Firebase Admin ko initialize karna
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Private key mein \n ko theek se replace karna bohat zaroori hai
-      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    }),
-  });
+  try {
+    // 1. Aapki .env file se pura JSON uthana
+    let serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || '{}';
+    
+    // 2. Agar .env upload karte waqt bahar single quotes (' ') lag gaye the, toh unhein hata dein
+    if (serviceAccountStr.startsWith("'") && serviceAccountStr.endsWith("'")) {
+      serviceAccountStr = serviceAccountStr.slice(1, -1);
+    }
+
+    // 3. JSON ko parse karna
+    const serviceAccount = JSON.parse(serviceAccountStr);
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } catch (error) {
+    console.error("Firebase Admin Init Error (Check .env JSON format):", error);
+  }
 }
 
 module.exports = async (req, res) => {
@@ -34,7 +44,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Missing targetToken" });
     }
 
-    // Modern FCM HTTP v1 Message (Data Only Payload for Background Wake-up)
+    // Modern FCM HTTP v1 Message (Data Only Payload)
     const message = {
       token: targetToken,
       android: {
@@ -42,7 +52,7 @@ module.exports = async (req, res) => {
       },
       data: {
         title: `Incoming ${callType === 'video' ? 'Video' : 'Audio'} Call`,
-        body: `${callerName} is calling you...`,
+        body: `${callerName || 'User'} is calling you...`,
         callerUid: String(callerUid),
         callType: String(callType),
         startCall: "true",
